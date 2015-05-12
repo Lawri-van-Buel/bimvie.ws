@@ -67,11 +67,11 @@
 		</table>
 	</div>
 	<div class="well well-sm clearfix">
-		<button class="btn btn-default pull-right addServiceButton">Add service</button>
+		<button class="btn btn-primary pull-right addServiceButton">Add service</button>
 	</div>
 </div>
 <script>
-function AddService2(main, project, serviceDescriptor, isLocal) {
+function AddService2(main, project, serviceDescriptor, isLocal, longCallBack) {
 	var othis = this;
 	othis.project = project;
 	othis.serviceDescriptor = serviceDescriptor;
@@ -90,9 +90,9 @@ function AddService2(main, project, serviceDescriptor, isLocal) {
 			targetElement.append("<option value=\"[SELECT_A_PROJECT]\" selected=\"selected\">[Select a project]</option>");
 			data.forEach(function(project){
 				var option = $("<option value=\"" + project.oid + "\">" + project.name + "</option>");
-//				if (project.oid == othis.project.oid) {
-//					option.attr("selected", "selected");
-//				}
+				if (project.oid == othis.project.oid) {
+					option.attr("selected", "selected");
+				}
 				targetElement.append(option);
 			});
 		});
@@ -146,9 +146,15 @@ function AddService2(main, project, serviceDescriptor, isLocal) {
 			othis.readExtendedDataOid = data.oid;
 			td1.append(main.createExtendedDataSchemaLink(data));
 		}, function(){
-			tr1.addClass("error");
-			td1.append("<br/>Missing extended data schema");
-		});
+			othis.addExtendedDataSchema(serviceDescriptor.readExtendedData, function(data){
+				othis.readExtendedDataOid = data.oid;
+				td1.append(main.createExtendedDataSchemaLink(data));
+				othis.canAdd();
+			}, function(){
+				tr1.addClass("error");
+				td1.append("<br/>Error adding extended data schema");
+			});
+		}, false, false, false);
 	}
 	if (serviceDescriptor.writeExtendedData != null) {
 		var tr2 = $("<tr><td>Write Extended Data</td></tr>");
@@ -159,21 +165,30 @@ function AddService2(main, project, serviceDescriptor, isLocal) {
 			othis.writeExtendedDataOid = data.oid;
 			td2.append(main.createExtendedDataSchemaLink(data));
 		}, function(){
-			tr2.addClass("error");
-			td2.append(serviceDescriptor.writeExtendedData);
-			td2.append("<br/>");
-			var addEds2 = $("<a>Add extended data schema</a>");
-			td2.append(addEds2);
-			addEds2.click(function(){
-				Global.bimServerApi.call("ServiceInterface", "getExtendedDataSchemaFromRepository", {namespace: serviceDescriptor.writeExtendedData}, function(data){
-					var exs = data;
-					main.showServerSettings(function(){
-						this.showAddExtendedDataSchema(exs);
-					});
-				})
+			othis.addExtendedDataSchema(serviceDescriptor.writeExtendedData, function(data){
+				othis.writeExtendedDataOid = data.oid;
+				td2.append(main.createExtendedDataSchemaLink(data));
+				othis.canAdd();
+			}, function(){
+				tr1.addClass("error");
+				td2.append("<br/>Error adding extended data schema");
 			});
-		});
+		}, false, false, false);
 	}
+	
+	this.addExtendedDataSchema = function(namespaceurl, callback, errorCallback){
+		var extendedDataSchema = {
+			__type: "SExtendedDataSchema",
+			name: namespaceurl,
+			namespace: namespaceurl,
+			url: namespaceurl,
+			type: "TXT"
+		};
+		Global.bimServerApi.call("ServiceInterface", "addExtendedDataSchema", {extendedDataSchema: extendedDataSchema}, function(oid){
+			extendedDataSchema.oid = oid
+			callback(extendedDataSchema);
+		}, errorCallback);
+	};
 	
 	this.addProfileDescriptor = function(profileDescriptor) {
 		$(".addservice2 .noprofiles").hide();
@@ -184,7 +199,7 @@ function AddService2(main, project, serviceDescriptor, isLocal) {
 		tr.append("<td>" + profileDescriptor.name + "</td>");
 		tr.append("<td>" + profileDescriptor.description + "</td>");
 		tr.append("<td>" + profileDescriptor.publicProfile + "</td>");
-		var radio = $("<input type=\"radio\" name=\"profile\" class=\"profileRadio form-control\"/>");
+		var radio = $("<input type=\"radio\" name=\"profile\" class=\"profileRadio\"/>");
 		radio.change(othis.canAdd);
 		tr.append($("<td></td>").append(radio));
 		$(".addservice2 .profilesTable tbody").append(tr);
@@ -257,16 +272,16 @@ function AddService2(main, project, serviceDescriptor, isLocal) {
 			};
 			if (isLocal) {
 				Global.bimServerApi.call("ServiceInterface", "addLocalServiceToProject", {poid: othis.project.oid, sService: service, internalServiceOid: profileDescriptor.identifier}, function(data){
-					main.showProject(othis.project, function(){
-						this.reloadProject();
-					});
+					if (longCallBack != null) {
+						longCallBack();
+					}
 				});
 			} else {
 				service.notificationProtocol = "JSON";
 				Global.bimServerApi.call("ServiceInterface", "addServiceToProject", {poid: othis.project.oid, sService: service}, function(data){
-					main.showProject(othis.project, function(){
-						this.reloadProject();
-					});
+					if (longCallBack != null) {
+						longCallBack();
+					}
 				});
 			}
 		}

@@ -3,6 +3,7 @@ var Settings = {
 		return "http://test.bimsurfer.org/index.html?token=" + bimServerApi.token + "&roid=" + roid + "&server=" + bimServerApi.baseUrl;
 	},
 	createStartPage: function(container, main){
+		pushHistory({page: "Projects"}, "Projects");
 		main.pageChanger.changePage($(".serverinfoLink"), "projects.html", function(){
 			return new Projects($(this), main);
 		});
@@ -34,7 +35,7 @@ var Settings = {
 		];
 	},
 	usableBimServerVersion: function(version) {
-		return version.major == 1 && version.minor == 3 && version.revision == 0;
+		return (version.major == 1 && version.minor == 3) || (version.major == 1 && version.minor == 4);
 	},
 	getStaticServerAddress: function(callback){
 		$.getJSON("getbimserveraddress", function(data){
@@ -45,5 +46,8 @@ var Settings = {
 	},
 	allowBimServerAddress: function() {
 		return false;
+	},
+	getDefaultHiddenTypes: function() {
+		return {"IfcOpeningElement": true, "IfcSpace": true};
 	}
 }

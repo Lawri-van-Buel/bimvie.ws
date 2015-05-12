@@ -1,4 +1,5 @@
 <div class="addservice">
+	<h1>Add Service</h1>
 	<h3>Add remote service<small class="loadedFrom"></small></h3>
 	<div class="well well-sm noremoteservices">
 		No remote services
@@ -40,15 +41,18 @@
 	</form>
 </div>
 <script>
-function AddService(main, project) {
+function AddService(main, project, longCallBack) {
 	var othis = this;
 
 	this.show = function(){
 		pushHistory({page: "AddService", poid: project.oid}, "Add Service");
+		$(".addservice h1").html("Add Service to " + project.name);
 	};
 	
 	this.proceedWithServiceDescriptor = function(serviceDescriptor, isLocal) {
-		main.showAddService2(project, serviceDescriptor, isLocal);
+		$(".addservice").load("addservice2.html", function(){
+			return new AddService2(main, project, serviceDescriptor, isLocal, longCallBack);
+		});
 	};
 	
 	this.addButtonClick = function(event) {
@@ -101,7 +105,6 @@ function AddService(main, project) {
 			baseUrl: $(".addservice .inputUrl").val(),
 			serviceIdentifier: $(".addservice .inputServiceIdentifier").val()
 		}, function(data){
-			console.log(data);
 			othis.proceedWithServiceDescriptor(data, null);
 		});
 	};
